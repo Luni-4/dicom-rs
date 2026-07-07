@@ -42,7 +42,7 @@ impl fmt::Display for DicomJsonPerson {
 }
 
 #[derive(Debug, Clone, PartialEq, Deserialize)]
-pub struct BulkDataUri(String);
+pub struct BulkDataUri(pub(super) String);
 
 #[derive(Debug, Clone, PartialEq, Deserialize)]
 #[serde(untagged)]

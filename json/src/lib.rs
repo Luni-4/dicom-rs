@@ -80,7 +80,7 @@
 mod de;
 mod ser;
 
-pub use crate::de::{from_reader, from_slice, from_str, from_value};
+pub use crate::de::{from_reader, from_slice, from_str, from_value, BulkDataDicomObject};
 pub use crate::ser::{to_string, to_string_pretty, to_value, to_vec, to_writer};
 
 /// Represents the serialized representation of "NaN" (Not a Number) for 32-bit float (FL) and 64-bit float (FD) in DICOM JSON.
@@ -168,6 +168,8 @@ pub const NEG_INFINITY: &str = "-inf";
 /// `DicomJson` can deserialize:
 ///
 /// - [`InMemDicomObject`][1], expecting a JSON object indexed by tags;
+/// - [`BulkDataDicomObject`], a DICOM object that preserves BulkDataURI references
+///   instead of skipping them (see [bulk data support](#bulk-data-support));
 /// - [`Tag`][5], a string formatted as a DICOM tag;
 /// - [`VR`][6], a 2-character string with one of the supported
 ///   value representation identifiers.
@@ -197,6 +199,32 @@ pub const NEG_INFINITY: &str = "-inf";
 ///       DataElement::new(Tag(0x0010, 0x0020), VR::LO, "ID0001"),
 ///   ]),
 /// );
+/// # Ok::<(), serde_json::Error>(())
+/// ```
+///
+/// ## Bulk Data Support
+///
+/// DICOM JSON can reference external binary data using BulkDataURI fields.
+/// By default, these are skipped during deserialization with a warning.
+/// To preserve the URI references, use [`BulkDataDicomObject`] instead:
+///
+/// ```
+/// # use dicom_core::Tag;
+/// use dicom_json::{DicomJson, BulkDataDicomObject};
+///
+/// let json_data = r#"{
+///     "7FE00010": {
+///         "vr": "OW",
+///         "BulkDataURI": "http://example.com/pixeldata"
+///     }
+/// }"#;
+///
+/// let obj: BulkDataDicomObject = dicom_json::from_str(json_data)?;
+///
+/// // Access the bulk data URI
+/// let uri = obj.bulk_data_uri(&Tag(0x7FE0, 0x0010));
+/// assert_eq!(uri, Some("http://example.com/pixeldata"));
+///
 /// # Ok::<(), serde_json::Error>(())
 /// ```
 #[derive(Debug, Clone, PartialEq)]

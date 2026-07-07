@@ -307,13 +307,64 @@ impl From<Tag> for DicomJson<Tag> {
 
 impl Serialize for DicomJson<Tag> {
     /// Serializes the DICOM tag as a single string in uppercase hexadecimal,
-    /// with no separators or delimiters (`"GGGGEEEE"`).
+     /// with no separators or delimiters (`"GGGGEEEE"`).
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: Serializer,
     {
         let Tag(g, e) = self.0;
         serializer.serialize_str(&format!("{g:04X}{e:04X}"))
+    }
+}
+
+impl<'a, D> From<&'a crate::de::BulkDataDicomObject<D>> for DicomJson<&'a crate::de::BulkDataDicomObject<D>> {
+    fn from(value: &'a crate::de::BulkDataDicomObject<D>) -> Self {
+        Self(value)
+    }
+}
+
+impl<'a, D> Serialize for DicomJson<&'a crate::de::BulkDataDicomObject<D>> {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        let mut ser = serializer.serialize_map(None)?;
+
+        // Serialize all regular data elements
+        for e in self.0.object() {
+            let tag = e.tag();
+            ser.serialize_entry(&DicomJson(tag), &DicomJson(e))?;
+        }
+
+        // Serialize all bulk data URIs
+        for tag in self.0.bulk_data_tags() {
+            if let Some(uri) = self.0.bulk_data_uri(tag) {
+                // Create a synthetic data element entry with BulkDataURI
+                let entry = serde_json::json!({
+                    "vr": "OB",  // typical for pixel data, but we don't know the actual VR
+                    "BulkDataURI": uri
+                });
+                ser.serialize_entry(&DicomJson(*tag), &entry)?;
+            }
+        }
+
+        ser.end()
+    }
+}
+
+impl<D> From<crate::de::BulkDataDicomObject<D>> for DicomJson<crate::de::BulkDataDicomObject<D>> {
+    fn from(value: crate::de::BulkDataDicomObject<D>) -> Self {
+        Self(value)
+    }
+}
+
+impl<D> Serialize for DicomJson<crate::de::BulkDataDicomObject<D>> {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        let obj_ref: &crate::de::BulkDataDicomObject<D> = &self.0;
+        DicomJson::from(obj_ref).serialize(serializer)
     }
 }
 
@@ -622,6 +673,35 @@ mod tests {
                     ]
                 }
             })
+        );
+    }
+
+    #[test]
+    fn serialize_bulk_data_object() {
+        use dicom_core::{DataElement, Tag, VR};
+        use dicom_object::InMemDicomObject;
+
+        let obj_inner = InMemDicomObject::from_element_iter([
+            DataElement::new(Tag(0x0010, 0x0020), VR::LO, "ID0001"),
+        ]);
+        let mut obj = crate::de::BulkDataDicomObject::from(obj_inner);
+        obj.set_bulk_data_uri(Tag(0x7FE0, 0x0010), "http://example.com/pixeldata".to_string());
+
+        let serialized = crate::to_value(&obj).unwrap();
+
+        // Check regular element is present
+        assert_eq!(
+            serialized["00100020"],
+            json!({
+                "vr": "LO",
+                "Value": ["ID0001"]
+            })
+        );
+
+        // Check bulk data URI is present
+        assert_eq!(
+            serialized["7FE00010"]["BulkDataURI"].as_str(),
+            Some("http://example.com/pixeldata")
         );
     }
 }

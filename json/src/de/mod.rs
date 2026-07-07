@@ -1,12 +1,13 @@
 //! DICOM JSON deserialization module
 
-use std::{marker::PhantomData, str::FromStr};
+use std::{collections::HashMap, marker::PhantomData, str::FromStr};
 
 use crate::DicomJson;
 use dicom_core::{
+    value::{InMemFragment, Value, C},
     DataDictionary, DataElement, PrimitiveValue, Tag, VR,
-    value::{C, InMemFragment, Value},
 };
+use dicom_dictionary_std::StandardDataDictionary;
 use dicom_object::InMemDicomObject;
 use serde::de::{Deserialize, DeserializeOwned, Error as _, Visitor};
 
@@ -45,6 +46,180 @@ where
     DicomJson<T>: DeserializeOwned,
 {
     serde_json::from_value::<DicomJson<T>>(value).map(DicomJson::into_inner)
+}
+
+/// A DICOM object that can store references to bulk data URIs.
+///
+/// This type wraps an [`InMemDicomObject`] and stores the locations of
+/// bulk data URIs alongside the in-memory data. This is useful when
+/// deserializing DICOM JSON that contains BulkDataURI fields,
+/// which reference external binary data instead of embedding it inline.
+///
+/// # Example
+///
+/// ```
+/// use dicom_core::Tag;
+/// use dicom_json::BulkDataDicomObject;
+///
+/// let json = r#"{
+///     "7FE00010": {
+///         "vr": "OW",
+///         "BulkDataURI": "http://example.com/pixeldata"
+///     }
+/// }"#;
+///
+/// let obj: BulkDataDicomObject = dicom_json::from_str(json).unwrap();
+/// if let Some(uri) = obj.bulk_data_uri(&Tag(0x7FE0, 0x0010)) {
+///     println!("Pixel data at: {uri}");
+/// }
+/// ```
+#[derive(Debug)]
+pub struct BulkDataDicomObject<D = StandardDataDictionary> {
+    /// The in-memory DICOM object.
+    obj: InMemDicomObject<D>,
+    /// Map of tags to their bulk data URIs.
+    bulk_data_uris: HashMap<Tag, String>,
+}
+
+impl<D: Default + DataDictionary + Clone> BulkDataDicomObject<D> {
+    /// Creates a new empty DICOM object with bulk data support using a default
+    /// dictionary.
+    #[inline]
+    pub fn new_empty_with_dict(dict: D) -> Self {
+        Self {
+            obj: InMemDicomObject::new_empty_with_dict(dict),
+            bulk_data_uris: HashMap::new(),
+        }
+    }
+}
+
+impl<D> BulkDataDicomObject<D> {
+    /// Get a reference to the underlying DICOM object.
+    pub const fn object(&self) -> &InMemDicomObject<D> {
+        &self.obj
+    }
+
+    /// Get a mutable reference to the underlying DICOM object.
+    pub const fn object_mut(&mut self) -> &mut InMemDicomObject<D> {
+        &mut self.obj
+    }
+
+    /// Take ownership of the underlying DICOM object, discarding
+    /// bulk data URIs.
+    #[inline]
+    pub fn into_object(self) -> InMemDicomObject<D> {
+        self.obj
+    }
+
+    /// Get the bulk data URI for a specific tag, if one exists
+    ///
+    /// Returns `None` if the tag has no associated bulk data URI.
+    #[inline]
+    pub fn bulk_data_uri(&self, tag: &Tag) -> Option<&str> {
+        self.bulk_data_uris.get(tag).map(|s| s.as_str())
+    }
+
+    /// Get all tags that have associated bulk data URIs.
+    #[inline]
+    pub fn bulk_data_tags(&self) -> impl Iterator<Item = &Tag> {
+        self.bulk_data_uris.keys()
+    }
+
+    /// Get all bulk data URIs as a map.
+    pub const fn bulk_data_uris(&self) -> &HashMap<Tag, String> {
+        &self.bulk_data_uris
+    }
+
+    /// Set a bulk data URI for a tag.
+    #[inline]
+    pub fn set_bulk_data_uri(&mut self, tag: Tag, uri: String) {
+        self.bulk_data_uris.insert(tag, uri);
+    }
+
+    /// Remove a bulk data URI for a tag.
+    #[inline]
+    pub fn remove_bulk_data_uri(&mut self, tag: Tag) -> Option<String> {
+        self.bulk_data_uris.remove(&tag)
+    }
+}
+
+impl<D> AsRef<InMemDicomObject<D>> for BulkDataDicomObject<D> {
+    fn as_ref(&self) -> &InMemDicomObject<D> {
+        &self.obj
+    }
+}
+
+impl<D> From<InMemDicomObject<D>> for BulkDataDicomObject<D> {
+    fn from(obj: InMemDicomObject<D>) -> Self {
+        Self {
+            obj,
+            bulk_data_uris: HashMap::new(),
+        }
+    }
+}
+
+#[derive(Debug)]
+struct BulkDataDicomObjectVisitor<D>(PhantomData<D>);
+
+impl<D> Default for BulkDataDicomObjectVisitor<D> {
+    fn default() -> Self {
+        Self(PhantomData)
+    }
+}
+
+impl<'de, D> Visitor<'de> for BulkDataDicomObjectVisitor<D>
+where
+    D: Default + DataDictionary + Clone,
+{
+    type Value = BulkDataDicomObject<D>;
+
+    fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+        formatter.write_str("a DICOM data set map")
+    }
+
+    fn visit_map<A>(self, mut map: A) -> Result<Self::Value, A::Error>
+    where
+        A: serde::de::MapAccess<'de>,
+    {
+        let mut obj = InMemDicomObject::<D>::new_empty_with_dict(D::default());
+        let mut bulk_data_uris = HashMap::new();
+
+        while let Some(e) = map.next_entry::<DicomJson<Tag>, JsonDataElement<D>>()? {
+            let (
+                DicomJson(tag),
+                JsonDataElement {
+                    vr,
+                    value,
+                    bulk_data_uri,
+                },
+            ) = e;
+
+            if let Some(BulkDataUri(uri)) = bulk_data_uri {
+                bulk_data_uris.insert(tag, uri);
+            } else {
+                obj.put(DataElement::new(tag, vr, value));
+            }
+        }
+
+        Ok(BulkDataDicomObject {
+            obj,
+            bulk_data_uris,
+        })
+    }
+}
+
+impl<'de, I> Deserialize<'de> for DicomJson<BulkDataDicomObject<I>>
+where
+    I: Default + Clone + DataDictionary,
+{
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        deserializer
+            .deserialize_map(BulkDataDicomObjectVisitor::default())
+            .map(DicomJson::from)
+    }
 }
 
 #[derive(Debug)]
@@ -418,21 +593,22 @@ impl<'de> Deserialize<'de> for DicomJson<Tag> {
 
 #[cfg(test)]
 mod tests {
-    use super::from_str;
-    use dicom_core::{DataElement, Tag, VR, dicom_value};
+    use super::BulkDataDicomObject;
+    use super::{from_str, from_value};
+    use dicom_core::{dicom_value, DataElement, Tag, VR};
     use dicom_object::InMemDicomObject;
     use num_traits::Float;
+
+    const BULKDATA_URI: &str = "http://localhost:8042/dicom-web/studies/1.2.276.0.89.300.10035584652.20181014.93645/series/1.2.392.200036.9125.3.1696751121028.64888163108.42362060/instances/1.2.392.200036.9125.9.0.454007928.539582480.1883970570/bulk/7fe00010";
 
     /// This asserts that two float slices are equal in size and content.
     /// It needs a special comparison for NAN values since assert_eq will not match.
     fn assert_float_slice_eq<T: Float>(actual: &[T], expected: &[T]) {
         assert_eq!(actual.len(), expected.len());
-        assert!(
-            actual
-                .iter()
-                .zip(actual.iter())
-                .all(|(&a, &b)| (a == b) || (a.is_nan() && b.is_nan()))
-        );
+        assert!(actual
+            .iter()
+            .zip(actual.iter())
+            .all(|(&a, &b)| (a == b) || (a.is_nan() && b.is_nan())));
     }
 
     #[test]
@@ -590,5 +766,61 @@ mod tests {
         ];
 
         assert_float_slice_eq(&actual_values_multifloat_64, expected_values_multifloat_64);
+    }
+
+    #[test]
+    fn can_deserialize_bulk_data_object() {
+        let serialized = serde_json::json!({
+            "00100020": {
+                "vr": "LO",
+                "Value": ["ID0001"]
+            },
+            "7FE00010": {
+                "vr": "OW",
+                "BulkDataURI": BULKDATA_URI,
+            }
+        });
+
+        let obj: BulkDataDicomObject = from_value(serialized).unwrap();
+
+        // Check that regular data element is present
+        let patient_id_tag = Tag(0x0010, 0x0020);
+        assert_eq!(
+            obj.object()
+                .get(patient_id_tag)
+                .and_then(|e| e.to_str().ok()),
+            Some("ID0001".into())
+        );
+
+        // Check that bulk data URI is stored
+        let pixel_data_tag = Tag(0x7FE0, 0x0010);
+        assert_eq!(obj.bulk_data_uri(&pixel_data_tag), Some(BULKDATA_URI));
+
+        // Check that pixel data element is not in object
+        assert!(obj.object().get(pixel_data_tag).is_none());
+    }
+
+    #[test]
+    fn bulk_data_object_methods() {
+        let obj_inner = InMemDicomObject::from_element_iter([DataElement::new(
+            Tag(0x0010, 0x0020),
+            VR::LO,
+            "ID0001",
+        )]);
+        let mut obj = BulkDataDicomObject::from(obj_inner);
+
+        // Test setting and getting bulk data URI
+        let pixel_data_tag = Tag(0x7FE0, 0x0010);
+        obj.set_bulk_data_uri(pixel_data_tag, BULKDATA_URI.to_string());
+
+        assert_eq!(obj.bulk_data_uri(&pixel_data_tag), Some(BULKDATA_URI));
+
+        // Test bulk_data_tags
+        assert!(obj.bulk_data_tags().any(|&tag| tag == pixel_data_tag));
+
+        // Test removing bulk data URI
+        let removed = obj.remove_bulk_data_uri(pixel_data_tag);
+        assert_eq!(removed, Some(BULKDATA_URI.to_string()));
+        assert_eq!(obj.bulk_data_uri(&pixel_data_tag), None);
     }
 }
