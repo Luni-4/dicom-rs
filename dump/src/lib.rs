@@ -86,10 +86,10 @@ pub enum DumpFormat {
 /// [`dump_object`] or [`dump_object_to`] methods
 /// work on bare DICOM objects without a file meta table.
 ///
-/// [`dump_file`]: DumpOptions::dump_file
-/// [`dump_file_to`]: DumpOptions::dump_file_to
-/// [`dump_object`]: DumpOptions::dump_object
-/// [`dump_object_to`]: DumpOptions::dump_object_to
+/// [`dump_file`]: Self::dump_file
+/// [`dump_file_to`]: Self::dump_file_to
+/// [`dump_object`]: Self::dump_object
+/// [`dump_object_to`]: Self::dump_object_to
 ///
 /// # Example
 ///
