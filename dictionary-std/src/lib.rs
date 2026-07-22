@@ -1,10 +1,10 @@
 //! This crate implements standard DICOM dictionaries and constants.
 //!
-//! ## Run-time dictinaries
+//! ## Run-time dictionaries
 //!
 //! The following modules provide definitions for dictionaries
 //! which can be queried during a program's lifetime:
-//!  
+//!
 //! - [`data_element`]: Contains all information about the
 //!   DICOM attributes specified in the standard,
 //!   and it will be used by default in most other abstractions available.
@@ -14,12 +14,12 @@
 //!   and their respective unique identifiers.
 //!
 //! The records in these dictionaries are typically collected
-//! from [DICOM PS3.6] directly,
+//! from [`DICOM PS3.6`] directly,
 //! but they may be obtained through other sources.
 //! Each dictionary is provided as a singleton
 //! behind a unit type for efficiency and ease of use.
 //!
-//! [DICOM PS3.6]: https://dicom.nema.org/medical/dicom/current/output/chtml/part06/ps3.6.html
+//! [`DICOM PS3.6`]: https://dicom.nema.org/medical/dicom/current/output/chtml/part06/ps3.6.html
 //!
 //! ## Constants
 //!
@@ -44,8 +44,8 @@ pub use sop_class::StandardSopClassDictionary;
 mod tests {
     use dicom_core::Tag;
 
-    /// tests for just a few attributes to make sure that the tag constants
-    /// were well installed into the crate
+    // tests for just a few attributes to make sure that the tag constants
+    // were well installed into the crate
     #[test]
     fn tags_constants_available() {
         use crate::tags::*;
@@ -55,7 +55,7 @@ mod tests {
         assert_eq!(STATUS, Tag(0x0000, 0x0900));
     }
 
-    /// tests for the presence of a few UID constants
+    // tests for the presence of a few UID constants
     #[test]
     fn uids_constants_available() {
         use crate::uids::*;

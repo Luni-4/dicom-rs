@@ -1,9 +1,11 @@
 //! Data element tag declarations
 //!
-//! Adapted from the DCMTK project.\
+//! Adapted from the DCMTK project.
+//!
 //! URL: <https://raw.githubusercontent.com/DCMTK/dcmtk/master/dcmdata/data/dicom.dic>\
-//! License: <https://github.com/DCMTK/dcmtk/blob/master/COPYRIGHT>\
-//! #  Copyright (C) 1994-2026, OFFIS e.V.\
+//! License: <https://github.com/DCMTK/dcmtk/blob/master/COPYRIGHT>
+//!
+//! **Copyright (C) 1994-2026, OFFIS e.V.**
 // Automatically generated. Edit at your own risk.
 #![allow(deprecated)]
 
