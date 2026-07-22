@@ -14,7 +14,7 @@ use dicom_core::{PrimitiveValue, Tag, VR};
 use snafu::ResultExt;
 use std::io::{self, Write};
 
-/// A concrete encoder for the transfer syntax ExplicitVRBigEndian
+/// A concrete encoder for the transfer syntax `ExplicitVRBigEndian`
 #[derive(Debug, Default, Clone)]
 pub struct ExplicitVRBigEndianEncoder {
     basic: BigEndianBasicEncoder,

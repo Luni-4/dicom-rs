@@ -3,8 +3,8 @@
 use self::explicit_le::ExplicitVRLittleEndianDecoder;
 use self::implicit_le::{ImplicitVRLittleEndianDecoder, StandardImplicitVRLittleEndianDecoder};
 use byteordered::Endianness;
-use dicom_core::Tag;
 use dicom_core::header::{DataElementHeader, SequenceItemHeader};
+use dicom_core::Tag;
 use snafu::{Backtrace, Snafu};
 use std::io::{self, Read};
 
@@ -62,30 +62,30 @@ pub enum Error {
 
 pub type Result<T> = std::result::Result<T, Error>;
 
-/** Obtain the default data element decoder.
- * According to the standard, data elements are encoded in Implicit
- * VR Little Endian by default.
- */
+/// Obtain the default data element decoder.
+/// According to the standard, data elements are encoded in Implicit
+/// VR Little Endian by default.
 pub fn default_reader() -> StandardImplicitVRLittleEndianDecoder {
     ImplicitVRLittleEndianDecoder::default()
 }
 
-/** Obtain a data element decoder for reading the data elements in a DICOM
- * file's Meta information. According to the standard, these are always
- * encoded in Explicit VR Little Endian.
- */
+/// Obtain a data element decoder for reading the data elements in a DICOM
+/// file's Meta information. According to the standard, these are always
+/// encoded in Explicit VR Little Endian.
 pub fn file_header_decoder() -> ExplicitVRLittleEndianDecoder {
     ExplicitVRLittleEndianDecoder::default()
 }
 
-/** Type trait for reading and decoding basic data values from a data source.
- *
- * This trait aims to provide methods for reading binary numbers based on the
- * source's endianness. Unlike `Decode`, this trait is not object safe.
- * However, it doesn't have to because there are, and only will be, two
- * possible implementations (`LittleEndianBasicDecoder` and
- * `BigEndianBasicDecoder`).
- */
+/// Type trait for reading and decoding basic data values from a data source.
+///
+/// This trait aims to provide methods for reading binary numbers based on the
+/// source's endianness. Unlike `Decode`, this trait is not object safe.
+/// However, it doesn't have to because there are, and only will be, two
+/// possible implementations
+/// ([`LittleEndianBasicDecoder`] and [`BigEndianBasicDecoder`]).
+///
+/// [`LittleEndianBasicDecoder`]: crate::decode::basic::LittleEndianBasicDecoder
+/// [`BigEndianBasicDecoder`]: crate::decode::basic::BigEndianBasicDecoder
 pub trait BasicDecode {
     /// Retrieve the source's endianness, as expected by this decoder.
     fn endianness(&self) -> Endianness;
@@ -501,30 +501,27 @@ where
     }
 }
 
-/** Type trait for reading and decoding DICOM data elements.
- *
- * The specific behaviour of decoding, even when abstracted from the original source,
- * may depend on the transfer syntax.
- */
+/// Type trait for reading and decoding DICOM data elements.
+///
+/// The specific behaviour of decoding, even when abstracted from the original source,
+/// may depend on the transfer syntax.
 pub trait Decode {
-    /** Fetch and decode the next data element header from the given source.
-     * This method returns only the header of the element. At the end of this operation, the source
-     * will be pointing at the element's value data, which should be read or skipped as necessary.
-     *
-     * Decoding an item or sequence delimiter is considered valid, and so should be properly handled
-     * by the decoder. The value representation in this case should be `UN`.
-     *
-     * Returns the expected header and the exact number of bytes read from the source.
-     */
+    /// Fetch and decode the next data element header from the given source.
+    /// This method returns only the header of the element. At the end of this operation, the source
+    /// will be pointing at the element's value data, which should be read or skipped as necessary.
+    ///
+    /// Decoding an item or sequence delimiter is considered valid, and so should be properly handled
+    /// by the decoder. The value representation in this case should be `UN`.
+    ///
+    /// Returns the expected header and the exact number of bytes read from the source.
     fn decode_header<S>(&self, source: &mut S) -> Result<(DataElementHeader, usize)>
     where
         S: ?Sized + Read;
 
-    /** Fetch and decode the next sequence item head from the given source. It is a separate method
-     * because value representation is always implicit when reading item headers and delimiters.
-     * This method returns only the header of the item. At the end of this operation, the source
-     * will be pointing at the beginning of the item's data, which should be traversed if necessary.
-     */
+    /// Fetch and decode the next sequence item head from the given source. It is a separate method
+    /// because value representation is always implicit when reading item headers and delimiters.
+    /// This method returns only the header of the item. At the end of this operation, the source
+    /// will be pointing at the beginning of the item's data, which should be traversed if necessary.
     fn decode_item_header<S>(&self, source: &mut S) -> Result<SequenceItemHeader>
     where
         S: ?Sized + Read;
@@ -587,29 +584,26 @@ where
     }
 }
 
-/** Type trait for reading and decoding DICOM data elements from a specific source
- * reader type.
- *
- * The specific behaviour of decoding, even when abstracted from the original source,
- * may depend on the transfer syntax.
- */
+/// Type trait for reading and decoding DICOM data elements from a specific source
+/// reader type.
+///
+/// The specific behaviour of decoding, even when abstracted from the original source,
+/// may depend on the transfer syntax.
 pub trait DecodeFrom<S: ?Sized + Read> {
-    /** Fetch and decode the next data element header from the given source.
-     * This method returns only the header of the element. At the end of this operation, the source
-     * will be pointing at the element's value data, which should be read or skipped as necessary.
-     *
-     * Decoding an item or sequence delimiter is considered valid, and so should be properly handled
-     * by the decoder. The value representation in this case should be `UN`.
-     *
-     * Returns the expected header and the exact number of bytes read from the source.
-     */
+    /// Fetch and decode the next data element header from the given source.
+    /// This method returns only the header of the element. At the end of this operation, the source
+    /// will be pointing at the element's value data, which should be read or skipped as necessary.
+    ///
+    /// Decoding an item or sequence delimiter is considered valid, and so should be properly handled
+    /// by the decoder. The value representation in this case should be `UN`.
+    ///
+    /// Returns the expected header and the exact number of bytes read from the source.
     fn decode_header(&self, source: &mut S) -> Result<(DataElementHeader, usize)>;
 
-    /** Fetch and decode the next sequence item head from the given source. It is a separate method
-     * because value representation is always implicit when reading item headers and delimiters.
-     * This method returns only the header of the item. At the end of this operation, the source
-     * will be pointing at the beginning of the item's data, which should be traversed if necessary.
-     */
+    /// Fetch and decode the next sequence item head from the given source. It is a separate method
+    /// because value representation is always implicit when reading item headers and delimiters.
+    /// This method returns only the header of the item. At the end of this operation, the source
+    /// will be pointing at the beginning of the item's data, which should be traversed if necessary.
     fn decode_item_header(&self, source: &mut S) -> Result<SequenceItemHeader>;
 
     /// Decode a DICOM attribute tag from the given source.

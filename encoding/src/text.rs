@@ -79,7 +79,7 @@ pub trait TextCodec {
     ///
     /// Should contain no leading or trailing spaces.
     /// This method may be useful for testing purposes, considering that
-    /// `TextCodec` is often used as a trait object.
+    /// [`TextCodec`] is often used as a trait object.
     fn name(&self) -> Cow<'static, str>;
 
     /// Decode the given byte buffer as a single string. The resulting string
@@ -129,13 +129,15 @@ where
 
 /// A descriptor for a specific character set,
 /// taking part in text encoding and decoding
-/// as per [PS3.5 ch 6 6.1](https://dicom.nema.org/medical/dicom/2023e/output/chtml/part05/chapter_6.html#sect_6.1).
+/// as per [`PS3.5 ch 6 6.1`].
 ///
 /// # Example
 ///
-/// Use [`from_code`](SpecificCharacterSet::from_code)
+/// Use [`from_code`](Self::from_code)
 /// or one of the associated constants to create a character set.
 /// From there, use the [`TextCodec`] trait to encode and decode text.
+///
+/// [`PS3.5 ch 6 6.1`]: https://dicom.nema.org/medical/dicom/current/output/chtml/part05/chapter_6.html#sect_6.1
 ///
 /// ```
 /// use dicom_encoding::text::{SpecificCharacterSet, TextCodec};

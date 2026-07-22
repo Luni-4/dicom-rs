@@ -9,12 +9,10 @@
 //!
 //! This crate provides interfaces and data structures for reading and writing
 //! data in accordance to the DICOM standard. This crate also hosts the concept
-//! of [transfer syntax specifier], which can be used to produce DICOM encoders
+//! of [`transfer_syntax`], which can be used to produce DICOM encoders
 //! and decoders at run-time.
 //!
 //! For the time being, all APIs are based on synchronous I/O.
-//!
-//! [transfer syntax specifier]: ./transfer_syntax/index.html
 
 pub mod adapters;
 pub mod decode;

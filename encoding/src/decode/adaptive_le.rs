@@ -24,7 +24,7 @@ use std::cell::Cell;
 use std::fmt;
 use std::io::Read;
 
-/// An AdaptiveVRLittleEndianDecoder which uses the standard data dictionary.
+/// An [`AdaptiveVRLittleEndianDecoder`] which uses the [`StandardDataDictionary`].
 pub type StandardAdaptiveVRLittleEndianDecoder =
     AdaptiveVRLittleEndianDecoder<StandardDataDictionary>;
 
@@ -97,7 +97,7 @@ where
         }
     }
 
-    /// Resolve VR for implicit mode using the data dictionary.
+    /// Resolve [`VR`] for implicit mode using the data dictionary.
     fn resolve_vr(&self, tag: Tag) -> VR {
         if tag == Tag(0x7FE0, 0x0010) || (tag.0 >> 8 == 0x60 && tag.1 == 0x3000) {
             VR::OW
@@ -110,8 +110,9 @@ where
     }
 }
 
-/// Check whether a probed VR is compatible with a dictionary VirtualVr.
-/// VirtualVr variants like Xs and Ox allow multiple concrete VRs.
+/// Check whether a probed [`VR`] is compatible with a dictionary [`VirtualVr`].
+/// [`VirtualVr`] variants like [`VirtualVr::Xs`] and [`VirtualVr::Ox`]
+/// allow multiple concrete VRs.
 fn vr_compatible_with_virtual(probed: VR, dict_vr: VirtualVr) -> bool {
     match dict_vr {
         VirtualVr::Exact(vr) => probed == vr,
@@ -233,7 +234,7 @@ where
     Ok((DataElementHeader::new(tag, vr, Length(len)), bytes_read))
 }
 
-/// Read the length field for an explicit VR element.
+/// Read the length field for an explicit [`VR`] element.
 /// Returns (length, total_bytes_read_including_tag_and_vr).
 fn decode_explicit_length<S>(source: &mut S, vr: VR, buf: &mut [u8; 4]) -> Result<(u32, usize)>
 where
@@ -274,8 +275,8 @@ where
     }
 }
 
-/// Read the length field for an implicit VR element (4 bytes)
-/// and resolve VR from the dictionary.
+/// Read the length field for an implicit [`VR`] element (4 bytes)
+/// and resolve [`VR`] from the dictionary.
 fn decode_implicit_length<S, D>(
     source: &mut S,
     tag: Tag,

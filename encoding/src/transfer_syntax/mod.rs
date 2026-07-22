@@ -1,5 +1,5 @@
 //! Module containing the DICOM Transfer Syntax data structure and related methods.
-//! Similar to the DcmCodec in DCMTK, the `TransferSyntax` contains all of the necessary
+//! Similar to the DcmCodec in DCMTK, the [`TransferSyntax`] contains all of the necessary
 //! algorithms for decoding and encoding DICOM data in a certain transfer syntax.
 //!
 //! This crate does not host specific transfer syntaxes. Instead, they are created in
@@ -10,14 +10,15 @@
 //!
 //! This module allows you to register your own transfer syntaxes.
 //! With the `inventory-registry` Cargo feature,
-//! you can use the macro [`submit_transfer_syntax`](crate::submit_transfer_syntax)
-//! or [`submit_ele_transfer_syntax`](crate::submit_ele_transfer_syntax)
+//! you can use the macro [`submit_transfer_syntax`]
+//! or [`submit_ele_transfer_syntax`]
 //! to instruct the compiler to include your implementation in the registry.
 //! Without the `inventory`-based registry
 //! (in case your environment does not support it),
-//! you can still roll your own [transfer syntax index][1].
+//! you can still roll your own [`TransferSyntaxIndex`].
 //!
-//! [1]: TransferSyntaxIndex
+//! [`submit_transfer_syntax`]: crate::submit_transfer_syntax
+//! [`submit_ele_transfer_syntax`]: crate::submit_ele_transfer_syntax
 //! [`dicom-transfer-syntax-registry`]: https://docs.rs/dicom-transfer-syntax-registry
 
 use crate::adapters::{
@@ -51,7 +52,7 @@ pub type DynEncoder<'w, W> = Box<dyn EncodeTo<W> + 'w>;
 ///
 /// This type is usually consumed in its "type erased" form,
 /// with its default parameter types.
-/// On the other hand, implementers of `TransferSyntax` will typically specify
+/// On the other hand, implementers of [`TransferSyntax`] will typically specify
 /// concrete types for `D` and `P`,
 /// which are type-erased before registration.
 /// If the transfer syntax requires no data set codec,
@@ -80,7 +81,9 @@ pub struct TransferSyntax<D = DynDataRWAdapter, R = DynPixelDataReader, W = DynP
 /// Implementers and consumers of transfer syntaxes
 /// will usually not interact with it directly.
 /// In order to register a new transfer syntax,
-/// see the macro [`submit_transfer_syntax`](crate::submit_transfer_syntax).
+/// see the macro [`submit_transfer_syntax`].
+///
+/// [`submit_transfer_syntax`]: crate::submit_transfer_syntax
 #[derive(Debug, Copy, Clone)]
 pub struct TransferSyntaxFactory(pub fn() -> TransferSyntax);
 
@@ -94,10 +97,11 @@ inventory::collect!(TransferSyntaxFactory);
 /// themselves with a set of transfer syntaxes, which can be fully supported,
 /// partially supported, or not supported. Usually, only one implementation
 /// of this trait is used for the entire program,
-/// the most common one being the `TransferSyntaxRegistry` type
-/// from [`transfer-syntax-registry`].
+/// the most common one being the
+/// [`TransferSyntaxRegistry`] type from [`transfer-syntax-registry`].
 ///
-/// [`transfer-syntax-registry`]: https://docs.rs/dicom-transfer-syntax-registry
+/// [`TransferSyntaxRegistry`]: ../transfer-syntax-registry::TransferSyntaxRegistry
+/// [`transfer-syntax-registry`]: ../transfer-syntax-registry
 pub trait TransferSyntaxIndex {
     /// Obtain a DICOM transfer syntax by its respective UID.
     ///
@@ -157,13 +161,11 @@ where
 /// ));
 /// ```
 ///
-/// With [`Codec::EncapsulatedPixelData(None, None)`][1],
+/// With [`Codec::EncapsulatedPixelData(None, None)`],
 /// we are indicating that the transfer syntax uses encapsulated pixel data.
 /// albeit without the means to decode or encode it.
 /// See the [`adapters`](crate::adapters) module
 /// to know how to write pixel data encoders and decoders.
-///
-/// [1]: Codec::EncapsulatedPixelData
 macro_rules! submit_transfer_syntax {
     ($ts: expr) => {
         $crate::inventory::submit! {
@@ -194,7 +196,7 @@ macro_rules! submit_transfer_syntax {
 /// Submit an explicit VR little endian transfer syntax specifier
 /// to be supported by the program's runtime.
 ///
-/// This macro is equivalent in behavior as [`submit_transfer_syntax`](crate::submit_transfer_syntax),
+/// This macro is equivalent in behavior as [`submit_transfer_syntax`],
 /// but it is easier to use when
 /// writing support for compressed pixel data formats,
 /// which are usually in explicit VR little endian.
@@ -215,6 +217,8 @@ macro_rules! submit_transfer_syntax {
 /// By writing a simple stub at your project's root,
 /// the rest of the ecosystem will know
 /// how to read and write data sets in that transfer syntax.
+///
+/// [`submit_transfer_syntax`]: crate::submit_transfer_syntax
 ///
 /// ```
 /// use dicom_encoding::{submit_ele_transfer_syntax, Codec};
@@ -251,7 +255,8 @@ macro_rules! submit_ele_transfer_syntax {
 /// Submit an explicit VR little endian transfer syntax specifier
 /// to be supported by the program's runtime.
 ///
-/// This macro is equivalent in behavior as [`submit_transfer_syntax`],
+/// This macro is equivalent in behavior as
+/// [`submit_transfer_syntax`],
 /// but it is easier to use when
 /// writing support for compressed pixel data formats,
 /// which are usually in explicit VR little endian.
@@ -260,6 +265,8 @@ macro_rules! submit_ele_transfer_syntax {
 /// function body at the root of the crate.
 ///
 /// Without the `inventory-registry` feature, this request is ignored.
+///
+/// [`submit_transfer_syntax`]: crate::submit_transfer_syntax
 macro_rules! submit_ele_transfer_syntax {
     ($uid: literal, $name: literal, $codec: expr) => {
         // ignore request
@@ -397,9 +404,11 @@ impl<D, R, W> TransferSyntax<D, R, W> {
     /// # Example
     ///
     /// To register a private transfer syntax in your program,
-    /// use [`submit_transfer_syntax`](crate::submit_transfer_syntax)
+    /// use [`submit_transfer_syntax`]
     /// outside of a function body:
-    ///  
+    ///
+    /// [`submit_transfer_syntax`]: crate::submit_transfer_syntax
+    ///
     /// ```no_run
     /// # use dicom_encoding::{
     /// #     submit_transfer_syntax, Codec, Endianness,
@@ -442,9 +451,11 @@ impl<D, R, W> TransferSyntax<D, R, W> {
     /// # Example
     ///
     /// To register a private transfer syntax in your program,
-    /// use [`submit_transfer_syntax`](crate::submit_transfer_syntax)
+    /// use [`submit_transfer_syntax`]
     /// outside of a function body:
-    ///  
+    ///
+    /// [`submit_transfer_syntax`]: crate::submit_transfer_syntax
+    ///
     /// ```no_run
     /// # use dicom_encoding::{
     /// #     submit_transfer_syntax, Codec,
@@ -459,8 +470,9 @@ impl<D, R, W> TransferSyntax<D, R, W> {
     /// }
     /// ```
     ///
-    /// See [`submit_ele_transfer_syntax`](crate::submit_ele_transfer_syntax)
-    /// for an alternative.
+    /// See [`submit_ele_transfer_syntax`] for an alternative.
+    ///
+    /// [`submit_ele_transfer_syntax`]: crate::submit_ele_transfer_syntax
     pub const fn new_ele(uid: &'static str, name: &'static str, codec: Codec<D, R, W>) -> Self {
         TransferSyntax {
             uid,
@@ -509,7 +521,7 @@ impl<D, R, W> TransferSyntax<D, R, W> {
     }
 
     /// Check whether neither reading nor writing of data sets is supported.
-    /// If this is `true`, encoding and decoding will not be available.
+    /// If this is [`true`], encoding and decoding will not be available.
     pub fn is_unsupported(&self) -> bool {
         matches!(self.codec, Codec::Dataset(None))
     }
@@ -522,7 +534,7 @@ impl<D, R, W> TransferSyntax<D, R, W> {
     }
 
     /// Check whether reading and writing the pixel data is unsupported.
-    /// If this is `true`, encoding and decoding of the data set may still
+    /// If this is [`true`], encoding and decoding of the data set may still
     /// be possible, but the pixel data will only be available in its
     /// encapsulated form.
     pub fn is_unsupported_pixel_encapsulation(&self) -> bool {
@@ -616,7 +628,7 @@ impl<D, R, W> TransferSyntax<D, R, W> {
 
     /// Obtain a reference to the underlying pixel data reader.
     ///
-    /// Returns `None` if pixel data is not encapsulated
+    /// Returns [`None`] if pixel data is not encapsulated
     /// or a pixel data decoder implementation is not available.
     pub fn pixel_data_reader(&self) -> Option<&R> {
         match &self.codec {
@@ -627,7 +639,7 @@ impl<D, R, W> TransferSyntax<D, R, W> {
 
     /// Obtain a reference to the underlying pixel data writer.
     ///
-    /// Returns `None` if pixel data is not encapsulated
+    /// Returns [`None`] if pixel data is not encapsulated
     /// or a pixel data encoder implementation is not available.
     pub fn pixel_data_writer(&self) -> Option<&W> {
         match &self.codec {

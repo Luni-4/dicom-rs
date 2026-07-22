@@ -95,7 +95,8 @@ pub enum Error {
 pub type Result<T, E = Error> = std::result::Result<T, E>;
 
 /// Type trait for an encoder of basic data properties.
-/// Unlike `Encode` (and similar to `BasicDecode`), this trait is not object
+/// Unlike [`Encode`] (and similar to
+/// [`BasicDecode`](crate::decode::BasicDecode)), this trait is not object
 /// safe because it's better to just provide a dynamic implementation.
 pub trait BasicEncode {
     /// Retrieve the encoder's endianness.
@@ -297,8 +298,8 @@ pub trait Encode {
         W: Write;
 
     /// Encode and write a DICOM sequence item header to the given destination.
-    /* Although item element headers are always a tag and length sequence regardless of TS,
-    the encoding of the length is unknown at this level. So no default impl. */
+    // Although item element headers are always a tag and length sequence regardless of TS,
+    // the encoding of the length is unknown at this level. So no default impl.
     fn encode_item_header<W>(&self, to: W, len: u32) -> Result<()>
     where
         W: Write;
@@ -467,8 +468,8 @@ pub trait EncodeTo<W: ?Sized> {
         W: Write;
 
     /// Encode and write a DICOM sequence item header to the given destination.
-    /* Although item element headers are always a tag and length sequence regardless of TS,
-    the encoding of the length is unknown at this level. So no default impl. */
+    // Although item element headers are always a tag and length sequence regardless of TS,
+    // the encoding of the length is unknown at this level. So no default impl.
     fn encode_item_header(&self, to: &mut W, len: u32) -> Result<()>
     where
         W: Write;
@@ -617,9 +618,8 @@ pub struct EncoderFor<T, W: ?Sized> {
 }
 
 impl<T, W: ?Sized> EncoderFor<T, W> {
-    /** Using a generic encoder, create a new encoder specifically for the given
-     * writer of type `W`.
-     */
+    /// Using a generic encoder, create a new encoder specifically for the given
+    /// writer of type `W`.
     pub fn new(encoder: T) -> Self {
         EncoderFor {
             inner: encoder,

@@ -5,12 +5,14 @@
 //! transfer syntaxes with encapsulated pixel data.
 //!
 //! Complete DICOM object types
-//! (such as `FileDicomObject<InMemDicomObject>`)
+//! (such as [`FileDicomObject<InMemDicomObject>`])
 //! implement the [`PixelDataObject`] trait.
 //! Transfer syntaxes which define an encapsulated pixel data encoding
 //! need to provide suitable implementations of
 //! [`PixelDataReader`] and [`PixelDataWriter`]
 //! to be able to decode and encode imaging data, respectively.
+//!
+//! [`FileDicomObject<InMemDicomObject>`]: https://docs.rs/dicom-object/latest/dicom_object/struct.FileDicomObject.html
 
 use dicom_core::{ops::AttributeOp, value::C};
 use snafu::Snafu;
@@ -27,7 +29,7 @@ use std::borrow::Cow;
 /// are recommended to choose the most fitting error variant
 /// for the tested condition.
 /// When no suitable variant is available,
-/// the [`Custom`](DecodeError::Custom) variant may be used.
+/// the [`Custom`](Self::Custom) variant may be used.
 /// See also [`snafu`] for guidance on using context selectors.
 #[derive(Debug, Snafu)]
 #[non_exhaustive]
@@ -76,7 +78,7 @@ pub enum DecodeError {
 /// are recommended to choose the most fitting error variant
 /// for the tested condition.
 /// When no suitable variant is available,
-/// the [`Custom`](EncodeError::Custom) variant may be used.
+/// the [`Custom`](Self::Custom) variant may be used.
 /// See also [`snafu`] for guidance on using context selectors.
 #[derive(Debug, Snafu)]
 #[non_exhaustive]
@@ -134,68 +136,66 @@ pub struct RawPixelData {
 /// for pixel data decoding into images or multi-dimensional arrays.
 ///
 /// It is defined in this crate so that
-/// transfer syntax implementers only have to depend on `dicom_encoding`.
+/// transfer syntax implementers only have to depend on [`dicom_encoding`](crate).
 ///
 /// [`dicom_object`]: https://docs.rs/dicom_object
 pub trait PixelDataObject {
     /// Return the object's transfer syntax UID.
     fn transfer_syntax_uid(&self) -> &str;
 
-    /// Return the _Rows_, or `None` if it is not found
+    /// Return the _Rows_, or [`None`] if it is not found
     fn rows(&self) -> Option<u16>;
 
-    /// Return the _Columns_, or `None` if it is not found
+    /// Return the _Columns_, or [`None`] if it is not found
     fn cols(&self) -> Option<u16>;
 
-    /// Return the _Samples Per Pixel_, or `None` if it is not found
+    /// Return the _Samples Per Pixel_, or [`None`] if it is not found
     fn samples_per_pixel(&self) -> Option<u16>;
 
-    /// Return the _Bits Allocated_, or `None` if it is not defined
+    /// Return the _Bits Allocated_, or [`None`] if it is not defined
     fn bits_allocated(&self) -> Option<u16>;
 
-    /// Return the _Bits Stored_, or `None` if it is not defined
+    /// Return the _Bits Stored_, or [`None`] if it is not defined
     fn bits_stored(&self) -> Option<u16>;
 
     /// Return the _Photometric Interpretation_,
     /// with trailing whitespace removed,
-    /// or `None` if it is not defined
+    /// or [`None`] if it is not defined
     fn photometric_interpretation(&self) -> Option<&str>;
 
     /// Return the _Number Of Frames_,
-    /// or `None` if it is not defined by this object.
+    /// or [`None`] if it is not defined by this object.
     fn number_of_frames(&self) -> Option<u32>;
 
     /// Returns the _number of pixel data fragments_,
     /// excluding the basic offset table,
-    /// or `None` for native pixel data.
+    /// or [`None`] for native pixel data.
     fn number_of_fragments(&self) -> Option<u32>;
 
     /// Return a specific encoded pixel fragment by index
     /// (where 0 is the first fragment after the basic offset table)
-    /// as a [`Cow<[u8]>`][1],
-    /// or `None` if no such fragment is available.
+    /// as a [`Cow<[u8]>`],
+    /// or [`None`] if no such fragment is available.
     ///
     /// In the case of native (non-encapsulated) pixel data,
     /// the whole data may be obtained
     /// by requesting fragment number 0.
-    ///
-    /// [1]: std::borrow::Cow
     fn fragment(&self, fragment: usize) -> Option<Cow<'_, [u8]>>;
 
     /// Return the object's offset table,
-    /// or `None` if no offset table is available.
+    /// or [`None`] if no offset table is available.
     fn offset_table(&self) -> Option<Cow<'_, [u32]>>;
 
     /// Should return either a byte slice/vector if the pixel data is native
     /// or the list of byte fragments and offset table if encapsulated.
     ///
-    /// Returns `None` if no pixel data is found.
+    /// Returns [`None`] if no pixel data is found.
     fn raw_pixel_data(&self) -> Option<RawPixelData>;
 
     /// Return the pixel data of a specific frame as a byte slice/vector,
     /// in its encoded form.
     ///
-    /// Returns `None` if there is no such frame or there is no pixel data at all.
+    /// Returns [`None`] if there is no such frame or there is no pixel data at all.
     ///
     /// _Note:_ If pixel data is uncompressed and Bits Allocated is 1,
     /// the slice may include leading or trailing bits
@@ -333,7 +333,7 @@ pub trait PixelDataReader {
     /// It is a necessary precondition that the object's pixel data
     /// is encoded in accordance to the transfer syntax(es)
     /// supported by this adapter.
-    /// A `NotEncapsulated` error is returned otherwise.
+    /// A [`DecodeError::NotEncapsulated`] error is returned otherwise.
     ///
     /// The output is a sequence of native pixel values
     /// which follow the image properties of the given object
@@ -364,7 +364,7 @@ pub trait PixelDataReader {
     /// It is a necessary precondition that the object's pixel data
     /// is encoded in accordance to the transfer syntax(es)
     /// supported by this adapter.
-    /// A `NotEncapsulated` error is returned otherwise.
+    /// A [`DecodeError::NotEncapsulated`] error is returned otherwise.
     ///
     /// The output is a sequence of native pixel values of a frame
     /// which follow the image properties of the given object
@@ -405,7 +405,7 @@ pub trait PixelDataWriter {
     /// If the given pixel data object is not in a native encoding,
     /// and this writer does not support transcoding
     /// from that encoding to the target transfer syntax,
-    /// a `NotNative` error is returned instead.
+    /// a [`EncodeError::NotNative`] error is returned instead.
     ///
     /// When the operation is successful,
     /// a listing of attribute changes is returned,
@@ -444,7 +444,7 @@ pub trait PixelDataWriter {
     /// If the given pixel data object is not in a native encoding,
     /// and this writer does not support transcoding
     /// from that encoding to the target transfer syntax,
-    /// a `NotNative` error is returned instead.
+    /// a [`EncodeError::NotNative`] error is returned instead.
     ///
     /// When the operation is successful,
     /// a listing of attribute changes is returned,
@@ -588,7 +588,7 @@ mod tests {
 
     use super::PixelDataObject;
 
-    /// Generates frames with solid pixel data values 0, 1, and so on.
+    // Generates frames with solid pixel data values 0, 1, and so on.
     fn generated_rgb_frames(columns: u16, rows: u16) -> impl Iterator<Item = Vec<u8>> {
         (0..=255_u8).map(move |n| vec![n; columns as usize * rows as usize * 3])
     }
@@ -690,8 +690,8 @@ mod tests {
         }
     }
 
-    /// Frame pixel data can be retrieved from an object
-    /// with native pixel data.
+    // Frame pixel data can be retrieved from an object
+    // with native pixel data.
     #[test]
     fn frame_pixel_data_in_object_flat() {
         let rows = 10;
@@ -723,8 +723,8 @@ mod tests {
         assert_eq!(obj.frame_pixel_data(4), None);
     }
 
-    /// Frame pixel data can be retrieved from an object
-    /// with encapsulated pixel data.
+    // Frame pixel data can be retrieved from an object
+    // with encapsulated pixel data.
     #[test]
     fn frame_pixel_data_in_object_encapsulated() {
         let obj = TestDataObject {

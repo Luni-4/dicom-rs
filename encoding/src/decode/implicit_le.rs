@@ -15,7 +15,7 @@ use snafu::ResultExt;
 use std::fmt;
 use std::io::Read;
 
-/// An ImplicitVRLittleEndianDecoder which uses the standard data dictionary.
+/// An [`ImplicitVRLittleEndianDecoder`] which uses the [`StandardDataDictionary`].
 pub type StandardImplicitVRLittleEndianDecoder =
     ImplicitVRLittleEndianDecoder<StandardDataDictionary>;
 
